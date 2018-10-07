@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
@@ -15,17 +16,30 @@ class Home extends StatefulWidget {
 }
 
 class _HomeState extends State<Home> {
+  final _toDoController = TextEditingController();
+  List _toDoList = [];
 
-   final _toDoController = TextEditingController();
-   List _toDoList = [];
+  @override
+  void initState() {
+    super.initState();
+
+    _readData().then((data) {
+      setState(() {
+        _toDoList = json.decode(data);
+      });
+    });
+  }
 
   void _addToDo() {
     setState(() {
       Map<String, dynamic> newToDo = Map();
-      newToDo["title"] = _toDoController.text;
-      _toDoController.text = "";
-      newToDo["ok"] = false;
-      _toDoList.add(newToDo);
+      if (_toDoController.text.isNotEmpty) {
+        newToDo["title"] = _toDoController.text;
+        _toDoController.text = "";
+        newToDo["ok"] = false;
+        _toDoList.add(newToDo);
+        _saveFile();
+      }
     });
   }
 
@@ -33,7 +47,10 @@ class _HomeState extends State<Home> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("\$ Lista de Despesas \$", style: TextStyle(fontSize: 25.0),),
+        title: Text(
+          "Lista de Despesas",
+          style: TextStyle(fontSize: 25.0),
+        ),
         backgroundColor: Colors.blueAccent,
         centerTitle: true,
       ),
@@ -52,10 +69,9 @@ class _HomeState extends State<Home> {
                             color: Colors.blueAccent, fontSize: 18.0)),
                   ),
                 ),
-                RaisedButton(
+                IconButton(
+                  icon: Icon(Icons.add_circle, size: 35.0,),
                   color: Colors.blueAccent,
-                  child: Text("Add"),
-                  textColor: Colors.white,
                   onPressed: _addToDo,
                 ),
               ],
@@ -65,33 +81,61 @@ class _HomeState extends State<Home> {
             child: ListView.builder(
               padding: EdgeInsets.only(top: 10.0),
               itemCount: _toDoList.length,
-              itemBuilder: (context, index) {
-                return CheckboxListTile(
-                  title: Text(_toDoList[index]["title"]),
-                  value: _toDoList[index]["ok"],
-                  secondary: CircleAvatar(
-                    child: Icon(_toDoList[index]["ok"]
-                        ? Icons.check_circle
-                        : Icons.error),
-                  ),
-                  onChanged: (c) {
-                    setState(() {
-                      _toDoList[index]["ok"] = c;
-                    });
-                  },
-                );
-              },
+              itemBuilder: buildItem,
             ),
           ),
         ],
       ),
     );
   }
-}
 
-Future<File> _getFile() async {
-  final directory = await getApplicationDocumentsDirectory();
-  return File("${directory.path}/data/json");
-}
+  Widget buildItem(context, index) {
+    return Dismissible(
+      key: Key(DateTime.now().millisecondsSinceEpoch.toString()),
+      background: Container(
+        color: Colors.red,
+        child: Align(
+          alignment: Alignment(-0.9, 0.0),
+          child: Icon(Icons.delete, size: 25.0, color: Colors.white,),
+        ),
+      ),
+      direction: DismissDirection.startToEnd,
+      child: CheckboxListTile(
+        title: Text(_toDoList[index]["title"]),
+        value: _toDoList[index]["ok"],
+        secondary: CircleAvatar(
+          child:
+              Icon(_toDoList[index]["ok"] ? Icons.check_circle : Icons.alarm),
+        ),
+        onChanged: (c) {
+          setState(() {
+            _toDoList[index]["ok"] = c;
+            _saveFile();
+          });
+        },
+      ),
+    );
+  }
 
-Future<File> _saveFile() async {}
+  Future<File> _getFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return File("${directory.path}/data.json");
+  }
+
+  Future<File> _saveFile() async {
+    String data = json.encode(_toDoList);
+
+    final file = await _getFile();
+    return file.writeAsString(data);
+  }
+
+  Future<String> _readData() async {
+    try {
+      final file = await _getFile();
+
+      return file.readAsString();
+    } catch (e) {
+      return null;
+    }
+  }
+}
