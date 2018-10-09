@@ -17,7 +17,10 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   final _toDoController = TextEditingController();
+  final _toDoValController = TextEditingController();
   List _toDoList = [];
+  Map<String, dynamic> _lastRemoved;
+  int _lastRemovedPos;
 
   @override
   void initState() {
@@ -33,9 +36,12 @@ class _HomeState extends State<Home> {
   void _addToDo() {
     setState(() {
       Map<String, dynamic> newToDo = Map();
-      if (_toDoController.text.isNotEmpty) {
+
+      if (_toDoController.text.isNotEmpty && _toDoValController.text.isNotEmpty) {
         newToDo["title"] = _toDoController.text;
+        newToDo["valor"] = _toDoValController.text;
         _toDoController.text = "";
+        _toDoValController.text = "";
         newToDo["ok"] = false;
         _toDoList.add(newToDo);
         _saveFile();
@@ -64,13 +70,32 @@ class _HomeState extends State<Home> {
                   child: TextField(
                     controller: _toDoController,
                     decoration: InputDecoration(
-                        labelText: "Nova conta",
+                        labelText: "Nova Conta",
+                        labelStyle: TextStyle(
+                            color: Colors.blueAccent, fontSize: 18.0)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.fromLTRB(17.0, 1.0, 7.0, 1.0),
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: TextField(
+                    controller: _toDoValController,
+                    decoration: InputDecoration(
+                        labelText: "Valor",
                         labelStyle: TextStyle(
                             color: Colors.blueAccent, fontSize: 18.0)),
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.add_circle, size: 35.0,),
+                  icon: Icon(
+                    Icons.add_circle,
+                    size: 35.0,
+                  ),
                   color: Colors.blueAccent,
                   onPressed: _addToDo,
                 ),
@@ -96,12 +121,19 @@ class _HomeState extends State<Home> {
         color: Colors.red,
         child: Align(
           alignment: Alignment(-0.9, 0.0),
-          child: Icon(Icons.delete, size: 25.0, color: Colors.white,),
+          child: Icon(
+            Icons.delete,
+            size: 25.0,
+            color: Colors.white,
+          ),
         ),
       ),
       direction: DismissDirection.startToEnd,
       child: CheckboxListTile(
-        title: Text(_toDoList[index]["title"]),
+        title: Text(_toDoList[index]["title"],
+        style: TextStyle(fontSize: 22.0),),
+        subtitle: Text("R\$" +_toDoList[index]["valor"],
+          style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold)),
         value: _toDoList[index]["ok"],
         secondary: CircleAvatar(
           child:
@@ -114,6 +146,28 @@ class _HomeState extends State<Home> {
           });
         },
       ),
+      onDismissed: (direction) {
+        setState(() {
+          _lastRemoved = Map.from(_toDoList[index]);
+          _lastRemovedPos = index;
+          _toDoList.removeAt(index);
+          _saveFile();
+
+          final snack = SnackBar(
+            content: Text("Tarefa \"${_lastRemoved["title"]}\" removida!"),
+            action: SnackBarAction(
+                label: "Desfazer",
+                onPressed: () {
+                  setState(() {
+                    _toDoList.insert(_lastRemovedPos, _lastRemoved);
+                    _saveFile();
+                  });
+                  Duration(seconds: 4);
+                }),
+          );
+          Scaffold.of(context).showSnackBar(snack);
+        });
+      },
     );
   }
 
