@@ -37,7 +37,8 @@ class _HomeState extends State<Home> {
     setState(() {
       Map<String, dynamic> newToDo = Map();
 
-      if (_toDoController.text.isNotEmpty && _toDoValController.text.isNotEmpty) {
+      if (_toDoController.text.isNotEmpty &&
+          _toDoValController.text.isNotEmpty) {
         newToDo["title"] = _toDoController.text;
         newToDo["valor"] = _toDoValController.text;
         _toDoController.text = "";
@@ -103,20 +104,28 @@ class _HomeState extends State<Home> {
             ),
           ),
           Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.only(top: 10.0),
-              itemCount: _toDoList.length,
-              itemBuilder: buildItem,
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView.builder(
+                padding: EdgeInsets.only(top: 10.0),
+                itemCount: _toDoList.length,
+                itemBuilder: buildItem,
+              ),
             ),
           ),
         ],
       ),
+
     );
   }
 
+
   Widget buildItem(context, index) {
     return Dismissible(
-      key: Key(DateTime.now().millisecondsSinceEpoch.toString()),
+      key: Key(DateTime
+          .now()
+          .millisecondsSinceEpoch
+          .toString()),
       background: Container(
         color: Colors.red,
         child: Align(
@@ -130,14 +139,16 @@ class _HomeState extends State<Home> {
       ),
       direction: DismissDirection.startToEnd,
       child: CheckboxListTile(
-        title: Text(_toDoList[index]["title"],
-        style: TextStyle(fontSize: 22.0),),
-        subtitle: Text("R\$" +_toDoList[index]["valor"],
-          style: TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold)),
+        title: Text(
+          _toDoList[index]["title"],
+          style: TextStyle(fontSize: 18.0),
+        ),
+        subtitle: Text("R\$" + _toDoList[index]["valor"],
+            style: TextStyle(fontSize: 15.0, fontWeight: FontWeight.bold)),
         value: _toDoList[index]["ok"],
         secondary: CircleAvatar(
           child:
-              Icon(_toDoList[index]["ok"] ? Icons.check_circle : Icons.alarm),
+          Icon(_toDoList[index]["ok"] ? Icons.check_circle : Icons.alarm),
         ),
         onChanged: (c) {
           setState(() {
@@ -191,5 +202,22 @@ class _HomeState extends State<Home> {
     } catch (e) {
       return null;
     }
+  }
+
+  Future<Null> _refresh() async {
+    await Future.delayed(Duration(seconds: 1));
+
+    setState(() {
+      _toDoList.sort((a, b) {
+        if (a["ok"] && !b["ok"])
+          return 1;
+        else if (!a["ok"] && b["ok"])
+          return -1;
+        else
+          return 0;
+
+      });
+      _saveFile();
+    });
   }
 }
